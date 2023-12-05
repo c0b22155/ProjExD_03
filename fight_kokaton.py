@@ -2,7 +2,7 @@ import os
 import random
 import sys
 import time
-
+import math
 import pygame as pg
 
 
@@ -93,7 +93,16 @@ class Bird:
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):  # なにもキーが押されていなくなかったら
             self.img = self.imgs[tuple(sum_mv)] 
         screen.blit(self.img, self.rct)
-
+        sum_mv = [0, 0]
+        for k, mv in self.delta.items():
+            if key_lst[k]:
+                sum_mv[0] += mv[0]
+                sum_mv[1] += mv[1]
+        self.rct.move_ip(sum_mv)
+        if check_bound(self.rct) != (True, True):
+            self.rct.move_ip(-sum_mv[0], -sum_mv[1])
+        if sum_mv[0] != 0 or sum_mv[1] != 0:
+            self.dire = tuple(sum_mv)  # 合計移動量で方向を更新
 
 class Bomb:
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), 
@@ -136,7 +145,14 @@ class Beam:
         self.rct.centery = bird.rct.centery   # こうかとんの中心座標を取得
         self.rct.centerx = bird.rct.centerx+bird.rct.width/2
         self.vx, self.vy = +5, 0
-
+        vx, vy = bird.dire 
+        angle = math.atan2(-vy, vx)  # 極座標の角度Θを計算
+        angle = math.degrees(angle)  # 弧度法から度数法に変換
+        self.img = pg.transform.rotozoom(pg.image.load(f"{MAIN_DIR}/fig/beam.png"), angle, 1.0)
+        # こうかとんの向いている方向を考慮した初期配置
+        self.rct = self.img.get_rect(center=(bird.rct.centerx + bird.rct.width * vx / 5,
+                                             bird.rct.centery + bird.rct.height * vy / 5))
+        
     def update(self, screen: pg.Surface):
         """
         ビームを速度ベクトルself.vx, self.vyに基づき移動させる
@@ -145,7 +161,19 @@ class Beam:
         self.rct.move_ip(self.vx, self.vy)
         screen.blit(self.img, self.rct)
 
-
+class Explosion:  #機能1:爆発のクラス
+    """
+    爆弾の爆発
+    """
+    def __init__(self, bomb: Bomb):
+        img = pg.image.load(f"{MAIN_DIR}/fig/explosion.gif")
+        self.imgs = [pg.transform.flip(img,True,True),img]
+        self.pos = bomb.rct.center
+        self.life = 30
+    def update(self,screen):
+        self.life -= 1
+        screen.blit(self.imgs[self.life%2],self.pos)  
+        
 class Score:
     """
     スコア表示に関するクラス
@@ -176,7 +204,7 @@ def main():
     beam = None
     beams = []  # 複数のビームのためのリスト
     score = Score()
-
+    exs = []
     clock = pg.time.Clock()
     tmr = 0
     while True:
@@ -196,6 +224,12 @@ def main():
                 pg.display.update()
                 time.sleep(1)
                 return
+        if beam is not None and beam.rct.colliderect(bomb.rct):
+            bird.change_img(6,screen)
+            exs.append(Explosion(bomb))
+            beam = None
+            bombs[i] = None
+
 
         # for i, bomb in enumerate(bombs):
         #     if beam is not None and beam.rct.colliderect(bomb.rct):
@@ -214,12 +248,15 @@ def main():
 
         # Noneでない爆弾だけのリストを作る
         bombs = [bomb for bomb in bombs if bomb is not None]
-
+        exs = [ex for ex in exs if ex.life >0]
+        key =pg.key.get_pressed()
+        bird.update(key,screen)
+        
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen)
         for bomb in bombs:
             bomb.update(screen)
-
+        
         for i, beam in enumerate(beams):
             if beam.rct.x < WIDTH:  # ビームが範囲内なら更新
                 beam.update(screen)
