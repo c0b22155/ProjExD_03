@@ -104,6 +104,7 @@ class Bird:
         if sum_mv[0] != 0 or sum_mv[1] != 0:
             self.dire = tuple(sum_mv)  # 合計移動量で方向を更新
 
+
 class Bomb:
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), 
               (255, 255, 0), (255, 0, 255), (0, 255, 255)]
@@ -192,8 +193,6 @@ class Score:
         screen.blit(self.img, self.rct)
 
 
-
-
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))    
@@ -248,6 +247,7 @@ def main():
 
         # Noneでない爆弾だけのリストを作る
         bombs = [bomb for bomb in bombs if bomb is not None]
+        
         exs = [ex for ex in exs if ex.life >0]
         key =pg.key.get_pressed()
         bird.update(key,screen)
@@ -262,7 +262,15 @@ def main():
                 beam.update(screen)
             else:
                 beams.remove(beam)  # ビームが範囲外ならリストから削除
-
+        for ex in exs:
+            ex.update(screen)
+            
+        for bomb in bombs:
+            bomb.update(screen)
+            
+        if beam is not None:
+            beam.update(screen)
+            
         score.update(screen)
         pg.display.update()
         tmr += 1
