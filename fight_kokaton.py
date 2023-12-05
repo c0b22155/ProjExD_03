@@ -9,7 +9,7 @@ import pygame as pg
 WIDTH = 1600  # ゲームウィンドウの幅
 HEIGHT = 900  # ゲームウィンドウの高さ
 MAIN_DIR = os.path.split(os.path.abspath(__file__))[0]
-NUM_OF_BOMBS = 5  # 爆弾の数
+NUM_OF_BOMBS = 1  # 爆弾の数
 
 
 def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
@@ -113,7 +113,8 @@ class Bomb:
         self.img.set_colorkey((0, 0, 0))
         self.rct = self.img.get_rect()
         self.rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)
-        self.vx, self.vy = +5, +5
+        self.vx, self.vy = random.choice([-5, +5]), random.choice([-5, +5])
+
     def update(self, screen: pg.Surface):
         """
         爆弾を速度ベクトルself.vx, self.vyに基づき移動させる
@@ -144,13 +145,28 @@ class Beam:
         self.rct.move_ip(self.vx, self.vy)
         screen.blit(self.img, self.rct)
 
-
+class Explosion:  #機能1:爆発のクラス
+    """
+    爆弾の爆発
+    """
+    def __init__(self, bomb: Bomb):
+        img = pg.image.load(f"{MAIN_DIR}/fig/explosion.gif")
+        self.imgs = [pg.transform.flip(img,True,True),img]
+        self.pos = bomb.rct.center
+        self.life = 30
+    def update(self,screen):
+        self.life -= 1
+        screen.blit(self.imgs[self.life%2],self.pos)  
+        
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))    
     bg_img = pg.image.load(f"{MAIN_DIR}/fig/pg_bg.jpg")
     bird = Bird(3, (900, 400))
-    bomb = Bomb((255, 0, 0), 10)
+    # BombインスタンスがNUM個並んだリスト
+    bombs = [Bomb() for _ in range(NUM_OF_BOMBS)]  
+    beam = None
+    exs = []  # Explosionインスタンスを保持するリスト　
     clock = pg.time.Clock()
     tmr = 0
     while True:
@@ -161,21 +177,42 @@ def main():
                 beam = Beam(bird)  # ビームインスタンスの生成
         
         screen.blit(bg_img, [0, 0])
+        
+        for bomb in bombs:
+            if bird.rct.colliderect(bomb.rct):
+                # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
+                bird.change_img(8, screen)
+                pg.display.update()
+                time.sleep(1)
+                return
+        if beam is not None and beam.rct.colliderect(bomb.rct):
+            bird.change_img(6,screen)
+            exs.append(Explosion(bomb))
+            beam = None
+            bombs[i] = None
 
-        if bird.rct.colliderect(bomb.rct):
-            # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
-            bird.change_img(8, screen)
-            pg.display.update()
-            time.sleep(1)
-            return
-        key_lst = pg.key.get_pressed()
-        bird.update(key_lst, screen)
-        bomb.update(screen)
-        beam.update(screen)
+        for i, bomb in enumerate(bombs):
+            if beam is not None and beam.rct.colliderect(bomb.rct):
+                beam = None
+                bombs[i] = None
+                bird.change_img(6, screen)
+        # Noneでない爆弾だけのリストを作る
+        bombs = [bomb for bomb in bombs if bomb is not None]
+        
+        exs = [ex for ex in exs if ex.life >0]
+        key =pg.key.get_pressed()
+        bird.update(key,screen)
+        
+        for ex in exs:
+            ex.update(screen)
+        for bomb in bombs:
+            bomb.update(screen)
+        if beam is not None:
+            beam.update(screen)
         pg.display.update()
-        tmr += 1
+        tmr +=    1
         clock.tick(50)
-
+        
 
 if __name__ == "__main__":
     pg.init()
