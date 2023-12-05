@@ -25,6 +25,18 @@ def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
         tate = False
     return yoko, tate
 
+class Score:
+    def __init__(self):
+        self.font = pg.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)  # フォント設定
+        self.color = (0, 0, 255)  # 文字色設定
+        self.value = 0  # スコアの初期値
+        self.img = self.font.render(f"Score: {self.value}", 0, self.color)  # 表示文字列Surface生成
+        self.rect = self.img.get_rect(bottomleft=(100, HEIGHT - 50))  # 文字列の中心座標
+
+    def update(self, screen):
+        self.img = self.font.render(f"Score: {self.value}", 0, self.color)  # 現在のスコアを表示させる文字列Surfaceの生成
+        screen.blit(self.img, self.rect)  # スクリーンにblit
+
 
 class Bird:
     """
@@ -187,6 +199,7 @@ def main():
     exs = []  # Explosionインスタンスを保持するリスト　
     clock = pg.time.Clock()
     tmr = 0
+    score = Score()
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -220,7 +233,16 @@ def main():
         exs = [ex for ex in exs if ex.life >0]
         key =pg.key.get_pressed()
         bird.update(key,screen)
-        
+        for i, bomb in enumerate(bombs):
+            if beam is not None and beam.rct.colliderect(bomb.rct):
+        # 爆弾を打ち落としたらスコアアップ
+                score.value += 1
+                explosion = Explosion(bomb.rct.center)
+                explosions.append(explosion)
+                bombs[i] = None
+                bird.change_img(6, screen)
+        bombs = [bomb for bomb in bombs if bomb is not None]
+        score.update(screen)    
         for ex in exs:
             ex.update(screen)
         for bomb in bombs:
