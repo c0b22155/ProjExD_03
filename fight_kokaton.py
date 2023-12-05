@@ -104,6 +104,7 @@ class Bird:
         if sum_mv[0] != 0 or sum_mv[1] != 0:
             self.dire = tuple(sum_mv)  # 合計移動量で方向を更新
 
+
 class Bomb:
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), 
               (255, 255, 0), (255, 0, 255), (0, 255, 255)]
@@ -161,6 +162,7 @@ class Beam:
         self.rct.move_ip(self.vx, self.vy)
         screen.blit(self.img, self.rct)
 
+
 class Explosion:  #機能1:爆発のクラス
     """
     爆弾の爆発
@@ -173,6 +175,7 @@ class Explosion:  #機能1:爆発のクラス
     def update(self,screen):
         self.life -= 1
         screen.blit(self.imgs[self.life%2],self.pos)  
+        
         
 class Score:
     """
@@ -190,8 +193,6 @@ class Score:
     def update(self, screen: pg.Surface):
         self.img = self.font.render(f"スコア：{self.score}", 0, self.color)
         screen.blit(self.img, self.rct)
-
-
 
 
 def main():
@@ -248,6 +249,7 @@ def main():
 
         # Noneでない爆弾だけのリストを作る
         bombs = [bomb for bomb in bombs if bomb is not None]
+        
         exs = [ex for ex in exs if ex.life >0]
         key =pg.key.get_pressed()
         bird.update(key,screen)
@@ -262,7 +264,15 @@ def main():
                 beam.update(screen)
             else:
                 beams.remove(beam)  # ビームが範囲外ならリストから削除
-
+        for ex in exs:
+            ex.update(screen)
+            
+        for bomb in bombs:
+            bomb.update(screen)
+            
+        if beam is not None:
+            beam.update(screen)
+            
         score.update(screen)
         pg.display.update()
         tmr += 1
