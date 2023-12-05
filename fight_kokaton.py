@@ -2,7 +2,7 @@ import os
 import random
 import sys
 import time
-
+import math
 import pygame as pg
 
 
@@ -66,7 +66,7 @@ class Bird:
         self.img = self.imgs[(+5, 0)]  # 右向きこうかとんをデフォ画像にする
         self.rct = self.img.get_rect()
         self.rct.center = xy
-
+    
     def change_img(self, num: int, screen: pg.Surface):
         """
         こうかとん画像を切り替え，画面に転送する
@@ -75,7 +75,8 @@ class Bird:
         """
         self.img = pg.transform.rotozoom(pg.image.load(f"{MAIN_DIR}/fig/{num}.png"), 0, 2.0)
         screen.blit(self.img, self.rct)
-
+        
+            
     def update(self, key_lst: list[bool], screen: pg.Surface):
         """
         押下キーに応じてこうかとんを移動させる
@@ -93,6 +94,16 @@ class Bird:
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):  # なにもキーが押されていなくなかったら
             self.img = self.imgs[tuple(sum_mv)] 
         screen.blit(self.img, self.rct)
+        sum_mv = [0, 0]
+        for k, mv in self.delta.items():
+            if key_lst[k]:
+                sum_mv[0] += mv[0]
+                sum_mv[1] += mv[1]
+        self.rct.move_ip(sum_mv)
+        if check_bound(self.rct) != (True, True):
+            self.rct.move_ip(-sum_mv[0], -sum_mv[1])
+        if sum_mv[0] != 0 or sum_mv[1] != 0:
+            self.dire = tuple(sum_mv)  # 合計移動量で方向を更新
 
 
 class Bomb:
@@ -136,6 +147,13 @@ class Beam:
         self.rct.centery = bird.rct.centery   # こうかとんの中心座標を取得
         self.rct.centerx = bird.rct.centerx+bird.rct.width/2
         self.vx, self.vy = +5, 0
+        vx, vy = bird.dire  # Birdクラスから方向を取得
+        angle = math.atan2(-vy, vx)  # 極座標の角度Θを計算
+        angle = math.degrees(angle)  # 弧度法から度数法に変換
+        self.img = pg.transform.rotozoom(pg.image.load(f"{MAIN_DIR}/fig/beam.png"), angle, 1.0)
+        # こうかとんの向いている方向を考慮した初期配置
+        self.rct = self.img.get_rect(center=(bird.rct.centerx + bird.rct.width * vx / 5,
+                                             bird.rct.centery + bird.rct.height * vy / 5))
 
     def update(self, screen: pg.Surface):
         """
